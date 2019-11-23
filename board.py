@@ -5,6 +5,7 @@ class Tile:
     self.x = x
     self.y = y
     self.is_bomb = is_bomb
+    self.revealed = True
 
 class Board:
   def __init__(self, width, height, num_bombs):
