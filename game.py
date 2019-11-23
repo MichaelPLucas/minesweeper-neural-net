@@ -36,10 +36,21 @@ def main():
   width = board.width * tile_width
   height = board.height * tile_height
   window = GraphWin("Minesweeper", width=width, height=height)
-
-  board.generate_new_board()
+  board.generate_new_board(Point(0, 0))
   for tile in board.tiles.values():
     draw_tile(tile, window)
+
+  first_click = window.getMouse()
+  first_point = Point(int(first_click.x / tile_width), int(first_click.y / tile_height))
+  board.generate_new_board(first_point)
+  flooded = board.flood_fill(first_point, [])
+
+  while True:
+    for point in flooded:
+      draw_tile(board.tiles[point], window)
+    click = window.getMouse()
+    point = Point(int(click.x / tile_width), int(click.y / tile_height))
+    flooded = board.flood_fill(point, [])
 
   window.getMouse()
   window.close()
