@@ -38,8 +38,18 @@ class Board:
     flooded = []
     if point.x > 0:
       flooded += self.flood_fill(Point(point.x - 1, point.y), seen)
+      if point.y > 0:
+        flooded += self.flood_fill(Point(point.x - 1, point.y - 1), seen)
+      if point.y < self.height - 1:
+        flooded += self.flood_fill(Point(point.x - 1, point.y + 1), seen)
+
     if point.x < self.width - 1:
       flooded += self.flood_fill(Point(point.x + 1, point.y), seen)
+      if point.y > 0:
+        flooded += self.flood_fill(Point(point.x + 1, point.y - 1), seen)
+      if point.y < self.height - 1:
+        flooded += self.flood_fill(Point(point.x + 1, point.y + 1), seen)
+
     if point.y > 0:
       flooded += self.flood_fill(Point(point.x, point.y - 1), seen)
     if point.y < self.height - 1:
