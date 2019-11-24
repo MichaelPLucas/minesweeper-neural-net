@@ -4,8 +4,8 @@ from graphics import Point
 class Agent:
   def __init__(self, num_tiles):
     self.num_tiles = num_tiles
-    self.weights = np.random.rand(25, 20)
-    self.hweights = np.random.rand(20, 1)
+    self.weights = np.random.rand(25, 10)
+    self.hweights = np.random.rand(10, 1)
     self.learning_rate = .1
 
   def sigmoid(self, x, w):
