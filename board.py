@@ -7,6 +7,7 @@ class Tile:
     self.y = y
     self.is_bomb = is_bomb
     self.revealed = False
+    self.flagged = False
 
 class Board:
   def __init__(self, width, height, num_bombs):
@@ -16,6 +17,7 @@ class Board:
     self.tiles = {}
 
   def generate_new_board(self, point):
+    self.tiles = {}
     bombs = random.sample([(x, y) for y in range(self.height) for x in range(self.width) if not (point.x - 1 <= x <= point.x + 1 and point.y - 1 <= y <= point.y + 1)], k=self.num_bombs)
     tiles = [Tile(x, y, (x, y) in bombs) for y in range(self.height) for x in range(self.width)]
     for tile in tiles:

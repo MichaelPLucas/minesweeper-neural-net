@@ -4,48 +4,62 @@ from graphics import Point
 class Agent:
   def __init__(self, num_tiles):
     self.num_tiles = num_tiles
-    self.weights = np.random.rand(num_tiles, num_tiles)
-    self.hweights = np.random.rand(num_tiles, num_tiles)
-    self.learning_rate = -.001
+    self.weights = np.random.rand(25, 20)
+    self.hweights = np.random.rand(20, 1)
+    self.learning_rate = .1
 
-  def get_move(self, board):
-    input_matrix = self.convert_to_matrix(board)
-    layer1 = np.matmul(input_matrix, self.weights)
-    layer1 = np.maximum(layer1, 0) # ReLU
-    scores = np.matmul(layer1, self.hweights)
+  def sigmoid(self, x, w):
+    z = np.dot(x, w)
+    return 1 / (1 + np.exp(-z))
 
-    ex_scores = [np.exp(scores) for score in scores]
-    ex_sum = sum(ex_scores)
-    softmax_scores = [ex_score / ex_sum for ex_score in ex_scores]
+  def sigmoid_deriv(self, x, w):
+    return self.sigmoid(x, w) * (1 - self.sigmoid(x, w))
 
-    actual_scores = self.get_actual_scores(board)
+  def run(self, x):
+    hlayer = self.sigmoid(x, self.weights)
+    return (hlayer, self.sigmoid(hlayer, self.hweights))
 
-    loss = sum([actual_scores[i] - softmax_scores[i] for i in range(len(actual_scores))]) / len(actual_scores)
-    deriv_loss = [[l if l > 0 else 0 for l in loss[0]]]
+  def get_loss(self, y, yhat):
+    return y - yhat
 
-    weights_gradient = np.dot(layer1.T, deriv_loss)
-    hweights_gradient = np.dot(scores.T, deriv_loss)
+  def train(self, board):
+    predictions = {}
+    for point, y in self.get_dataset(board):
+      xs = self.get_frame(board, point)
+      hlayer, yhat = self.run(xs)
+      predictions[(point.x, point.y)] = yhat[0][0]
 
-    self.weights += weights_gradient * self.learning_rate
-    self.hweights += hweights_gradient * self.learning_rate
+      loss = self.get_loss(y, yhat)
 
-    best_index = softmax_scores.index(max(softmax_scores))
-    return Point(best_index % board.width, int(best_index / board.width))
+      hweights_grad = np.dot(hlayer.T, loss * self.sigmoid_deriv(hlayer, self.hweights))
+      weights_grad = np.dot(xs.T, np.dot(loss * self.sigmoid_deriv(hlayer, self.hweights), hlayer) * self.sigmoid_deriv(xs, self.weights))
 
-  def convert_to_matrix(self, board):
-    matrix = np.zeros((1, self.num_tiles))
+      self.weights += weights_grad * self.learning_rate
+      self.hweights += hweights_grad * self.learning_rate
+    return predictions
+
+  def get_dataset(self, board):
+    dataset = []
     for tile in board.tiles.values():
-      value = -1
-      if tile.revealed:
-        value = sum([1 for neighbor in board.get_neighbors(Point(tile.x, tile.y)) if board.tiles[neighbor].is_bomb])
-      matrix[0][tile.x + tile.y * board.width] = value
-    return matrix
+      if not tile.revealed and any([board.tiles[n].revealed for n in board.get_neighbors(Point(tile.x, tile.y))]):
+        y = np.array([[1 if tile.is_bomb else 0]])
+        dataset.append((Point(tile.x, tile.y), y))
+    return dataset
 
-  def get_actual_scores(self, board):
-    matrix = np.zeros((1, self.num_tiles))
-    for tile in board.tiles.values():
-      if tile.is_bomb:
-        matrix[0][tile.x + tile.y * board.width] = -5
-      else:
-        matrix[0][tile.x + tile.y * board.width] = board.flood_count(Point(tile.x, tile.y), [])
-    return matrix
+  # Get a 5x5 frame around the point in question.
+  # This represents all surrounding tiles and all the tiles they are touching.
+  # The idea is to capture all information which indicates whether or not the given tile is a bomb.
+  def get_frame(self, board, point):
+    frame = np.zeros((1, 25))
+    for x in range(-2, 2):
+      for y in range(-2, 2):
+        index = x + y * 5 + 12
+        if x + point.x < 0 or y + point.y < 0 or x + point.x >= board.width or y + point.y >= board.height:
+          frame[0][index] = 0
+        elif board.tiles[(point.x + x, point.y + y)].flagged:
+          frame[0][index] = -1
+        elif board.tiles[(point.x + x, point.y + y)].revealed:
+          neighbors = board.get_neighbors(Point(point.x, point.y))
+          bomb_count = sum([1 if board.tiles[n].is_bomb else 0 for n in neighbors])
+          frame[0][index] = bomb_count
+    return frame

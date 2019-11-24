@@ -1,4 +1,6 @@
 import argparse
+import random
+import time
 from graphics import *
 from board import *
 from agent import *
@@ -55,12 +57,12 @@ def draw_tile(tile, board, window):
   else:
     t.setFill(color_rgb(150, 150, 150))
     t.draw(window)
-
-def get_input(window, board, agent):
-  if args.input == "mouse":
-    return window.getMouse()
-  elif args.input == "agent":
-    return agent.get_move(board)
+    if tile.flagged:
+      tri = Polygon(Point((tile.x + .15) * tile_width, (tile.y + .15) * tile_height),
+                    Point((tile.x + .15) * tile_width, (tile.y + .85) * tile_height),
+                    Point((tile.x + .85) * tile_width, (tile.y + .5) * tile_height))
+      tri.setFill(color_rgb(255, 50, 50))
+      tri.draw(window)
 
 def main():
   if args.difficulty == "custom":
@@ -75,25 +77,59 @@ def main():
   for tile in board.tiles.values():
     draw_tile(tile, board, window)
 
-  first_click = get_input(window, board, agent)
-  first_point = Point(int(first_click.x / tile_width), int(first_click.y / tile_height))
-  board.generate_new_board(first_point)
-  flooded = board.flood_fill(first_point, [])
+  # Normal game flow for player control
+  if args.input == "mouse":
+    first_click = window.getMouse()
+    first_point = Point(int(first_click.x / tile_width), int(first_click.y / tile_height))
+    board.generate_new_board(first_point)
+    flooded = board.flood_fill(first_point, [])
 
-  while True:
-    print("looped")
-    for point in list(set(flooded)):
-      draw_tile(board.tiles[point], board, window)
-    click = get_input(window, board, agent)
-    print(click)
-    point = Point(int(click.x / tile_width), int(click.y / tile_height))
+    while True:
+      for point in list(set(flooded)):
+        draw_tile(board.tiles[point], board, window)
+    
+      click = window.getMouse()
+      point = Point(int(click.x / tile_width), int(click.y / tile_height))
 
-    if board.tiles[(point.x, point.y)].is_bomb:
-      main()
-      break
+      if board.tiles[(point.x, point.y)].is_bomb:
+        main()
+        break
 
-    flooded = board.flood_fill(point, [])
+      flooded = board.flood_fill(point, [])
 
-  window.close()
+    window.close()
+  
+  # Game flow for agent training and action
+  else:
+    point = random.choice(list(board.tiles.keys()))
+    board.generate_new_board(Point(point[0], point[1]))
+    flooded = board.flood_fill(Point(point[0], point[1]), [])
+
+    while True:
+      for point in list(set(flooded)):
+        draw_tile(board.tiles[point], board, window)
+
+      predictions = agent.train(board)
+      to_flag = []
+      to_click = []
+      flooded = []
+      for point, prediction in predictions.items():
+        if prediction > .8:
+          board.tiles[point].flagged = True
+          flooded.append(point)
+        else:
+          board.tiles[point].flagged = False
+          flooded.append(point)
+        if prediction < .3:
+          if board.tiles[point].is_bomb:
+            point = random.choice(list(board.tiles.keys()))
+            board.generate_new_board(Point(point[0], point[1]))
+            board.flood_fill(Point(point[0], point[1]), [])
+            flooded = list(board.tiles.keys())
+            for point in list(set(flooded)):
+              draw_tile(board.tiles[point], board, window)
+            flooded = []
+            continue
+          flooded += board.flood_fill(Point(point[0], point[1]), [])
 
 main()
