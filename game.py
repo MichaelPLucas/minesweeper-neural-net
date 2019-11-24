@@ -1,5 +1,29 @@
+import argparse
 from graphics import *
 from board import *
+
+parser = argparse.ArgumentParser(description="Start up a game of minesweeper")
+parser.add_argument("--difficulty",
+                    default="expert",
+                    choices=["beginner", "intermediate", "expert", "custom_standard", "custom"],
+                    help="The game difficulty.")
+parser.add_argument("--width",
+                    default=30,
+                    type=int,
+                    help="The board width. To be used with 'custom' difficulty.")
+parser.add_argument("--height",
+                    default=24,
+                    type=int,
+                    help="The board height. To be used with 'custom' difficulty.")
+parser.add_argument("--num_bombs",
+                    default=200,
+                    type=int,
+                    help="The number of bombs. To be used with 'custom' difficulty.")
+parser.add_argument("--input",
+                    default="mouse",
+                    choices=["mouse", "agent"],
+                    help="The input type for the game.")
+args = parser.parse_args()
 
 tile_width = 20
 tile_height = 20
@@ -31,12 +55,17 @@ def draw_tile(tile, board, window):
     t.setFill(color_rgb(150, 150, 150))
     t.draw(window)
 
+def get_input(window):
+  if args.input == "mouse":
+    return window.getMouse()
+  elif args.input == "agent":
+    return agent.get_move(board.tiles.values())
 
 def main():
-  if sys.argv[1] == "custom":
-    board = Board(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]))
+  if args.difficulty == "custom":
+    board = Board(args.width, args.height, args.num_bombs)
   else:
-    board = boards[sys.argv[1]]
+    board = boards[args.difficulty]
   width = board.width * tile_width
   height = board.height * tile_height
   window = GraphWin("Minesweeper", width=width, height=height)
@@ -44,7 +73,7 @@ def main():
   for tile in board.tiles.values():
     draw_tile(tile, board, window)
 
-  first_click = window.getMouse()
+  first_click = get_input(window)
   first_point = Point(int(first_click.x / tile_width), int(first_click.y / tile_height))
   board.generate_new_board(first_point)
   flooded = board.flood_fill(first_point, [])
@@ -52,11 +81,15 @@ def main():
   while True:
     for point in flooded:
       draw_tile(board.tiles[point], board, window)
-    click = window.getMouse()
+    click = get_input(window)
     point = Point(int(click.x / tile_width), int(click.y / tile_height))
+
+    if board.tiles[(point.x, point.y)].is_bomb:
+      main()
+      break
+
     flooded = board.flood_fill(point, [])
 
-  window.getMouse()
   window.close()
 
 main()

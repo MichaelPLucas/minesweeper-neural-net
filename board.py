@@ -31,29 +31,14 @@ class Board:
     if self.tiles[(point.x, point.y)].is_bomb:
       return seen
 
-    for neighbor in self.get_neighbors(point):
+    neighbors = self.get_neighbors(point)
+    for neighbor in neighbors:
       if self.tiles[neighbor].is_bomb:
         return seen
 
     flooded = []
-    if point.x > 0:
-      flooded += self.flood_fill(Point(point.x - 1, point.y), seen)
-      if point.y > 0:
-        flooded += self.flood_fill(Point(point.x - 1, point.y - 1), seen)
-      if point.y < self.height - 1:
-        flooded += self.flood_fill(Point(point.x - 1, point.y + 1), seen)
-
-    if point.x < self.width - 1:
-      flooded += self.flood_fill(Point(point.x + 1, point.y), seen)
-      if point.y > 0:
-        flooded += self.flood_fill(Point(point.x + 1, point.y - 1), seen)
-      if point.y < self.height - 1:
-        flooded += self.flood_fill(Point(point.x + 1, point.y + 1), seen)
-
-    if point.y > 0:
-      flooded += self.flood_fill(Point(point.x, point.y - 1), seen)
-    if point.y < self.height - 1:
-      flooded += self.flood_fill(Point(point.x, point.y + 1), seen)
+    for neighbor in neighbors:
+      flooded += self.flood_fill(Point(neighbor[0], neighbor[1]), seen)
     
     return seen + flooded
 
