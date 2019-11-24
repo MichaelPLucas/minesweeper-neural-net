@@ -42,6 +42,23 @@ class Board:
     
     return seen + flooded
 
+  def flood_count(self, point, seen):
+    if (point.x, point.y) in seen:
+      return len(seen)
+
+    seen.append((point.x, point.y))
+
+    neighbors = self.get_neighbors(point)
+    for neighbor in neighbors:
+      if self.tiles[neighbor].is_bomb:
+        return len(seen)
+
+    flooded = []
+    for neighbor in neighbors:
+      flooded += self.flood_fill(Point(neighbor[0], neighbor[1]), seen)
+    
+    return len(seen) + len(flooded)
+
   def get_neighbors(self, point):
     neighbors = []
     x, y = point.x, point.y

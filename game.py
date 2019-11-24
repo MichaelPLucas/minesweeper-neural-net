@@ -1,6 +1,7 @@
 import argparse
 from graphics import *
 from board import *
+from agent import *
 
 parser = argparse.ArgumentParser(description="Start up a game of minesweeper")
 parser.add_argument("--difficulty",
@@ -55,11 +56,11 @@ def draw_tile(tile, board, window):
     t.setFill(color_rgb(150, 150, 150))
     t.draw(window)
 
-def get_input(window):
+def get_input(window, board, agent):
   if args.input == "mouse":
     return window.getMouse()
   elif args.input == "agent":
-    return agent.get_move(board.tiles.values())
+    return agent.get_move(board)
 
 def main():
   if args.difficulty == "custom":
@@ -70,18 +71,21 @@ def main():
   height = board.height * tile_height
   window = GraphWin("Minesweeper", width=width, height=height)
   board.generate_new_board(Point(0, 0))
+  agent = Agent(board.width * board.height)
   for tile in board.tiles.values():
     draw_tile(tile, board, window)
 
-  first_click = get_input(window)
+  first_click = get_input(window, board, agent)
   first_point = Point(int(first_click.x / tile_width), int(first_click.y / tile_height))
   board.generate_new_board(first_point)
   flooded = board.flood_fill(first_point, [])
 
   while True:
-    for point in flooded:
+    print("looped")
+    for point in list(set(flooded)):
       draw_tile(board.tiles[point], board, window)
-    click = get_input(window)
+    click = get_input(window, board, agent)
+    print(click)
     point = Point(int(click.x / tile_width), int(click.y / tile_height))
 
     if board.tiles[(point.x, point.y)].is_bomb:
